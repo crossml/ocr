@@ -1,79 +1,97 @@
-from sre_constants import SUCCESS
+"""
+tessaract ocr pipeline
+"""
+import os
+import json
 import cv2
 import pytesseract
-import json
-import os
+import zipfile
 from pytesseract import Output
 from pdf2image import convert_from_path
-# image_file_list = []
-inp_path = "/home/sourav/project/OCR/images"
-out_path = "/home/sourav/project/OCR/json_dir"
-# lst=[]
-# img = cv2.imread('1.png')
-# custom_config = r'--oem 3 --psm 6'
-# text= pytesseract.image_to_data(img, config=custom_config)
-# # lst.append(text)
-# # print(lst)
-# # for b in text.splitlines():
-# #   b = b.split(' ')
-# # with open('main.txt', 'w') as f:
-# #     for l in lst:
-# #         f.write(l)
-# #         f.write("/n")
+from config import INPUT_PATH
+from config import OUTPUT_PATH
 
-# json_string = json.dumps(text)
-# print(json_string)
-# # text = pytesseract.image_to_boxes(img)
-# with open('main1.json', 'w') as f:
-#     json.dump(json_string, f)
 
-for file in os.listdir(inp_path):
-    extension = os.path.splitext(file)[-1].lower()
-    if extension == '.pdf':
-        # breakpoint()
+class TessaractOcr:
+    """
+    tesseract ocr
+    """
 
-        pdf_pages = convert_from_path(inp_path+'/' + file, 500)
-        # for page_enumeration, page in enumerate(pdf_pages, start=1):
-        #     filename = f"{tempdir}\page_{page_enumeration:03}.jpg"
-        #     page.save(filename, "JPEG")
-        #     image_file_list.append(filename)
-        output_filename = os.path.splitext(file)[0]
-        a = []
-        for i in pdf_pages:
-            d = pytesseract.image_to_data(i, output_type=Output.DICT)
+    def __init__(self):
+        pass
 
-            d = {os.path.basename(file): [{'Confidence Score': conf, 'Text': text, 'Line no.': line_no, 'Top': top, 'Left': left, }
-                                               for conf, text, line_no, top, left in zip(d['conf'], d['text'], d['line_num'], d['top'], d['left'])]}
-            a.append(d)
-        with open(out_path+'/' + output_filename+'.json', 'w') as f:
-            # for image_file in pdf_pages:
+    def image_processing(self, input_file):
+        """
+        image processing
 
-            json.dump(a, f, indent=4)
-
-    else:
-
-        file_name = file
+        Args:
+            input_file (str): input file name
+        """
+        file_name = input_file
         output_filename = os.path.splitext(file_name)[0]
-        # print(file)
-        img = cv2.imread(inp_path+'/'+file_name)
+        img = cv2.imread(INPUT_PATH+'/'+file_name)
+        process_image = pytesseract.image_to_data(img, output_type=Output.DICT)
+        with open(OUTPUT_PATH+'/' + output_filename+'.json', 'w') as f:
+            process_image = {os.path.basename(file_name): [{'Confidence Score': conf, 'Text': text,
+                                                           'Line no.': line_no, 'Top': top, 'Left':
+                                                            left, } for conf, text, line_no,
+                                                           top, left in zip(process_image['conf'],
+                                                                            process_image['text'],
+                                                                            process_image['line_num'],
+                                                                            process_image['top'],
+                                                                            process_image['left'])]}
+            json.dump(process_image, f, indent=4)
 
-        d = pytesseract.image_to_data(img, output_type=Output.DICT)
+    def pdf_processing(self, input_file):
+        """
+        pdf processing
 
-        # print(d['conf'])
-        # print(d['text'])
-        # print(d['line_num'])
-        # print(d.keys())
-        # z=zip(d['conf'],d['text'],d['line_num'])
-        with open(out_path+'/' + output_filename+'.json', 'w') as f:
-            # for text in d['text']:
-            #     for lineno in d['line_num']:
-            # pass
-            d = {os.path.basename(file_name): [{'Confidence Score': conf, 'Text': text, 'Line no.': line_no, 'Top': top, 'Left': left, }
-                                               for conf, text, line_no, top, left in zip(d['conf'], d['text'], d['line_num'], d['top'], d['left'])]}
-            json.dump(d, f, indent=4)
+        Args:
+            input_file (str): input file name
+        """
+        pdf_pages = convert_from_path(INPUT_PATH+'/' + input_file, 500)
+        output_filename = os.path.splitext(input_file)[0]
+        counter = 0
+        for i in pdf_pages:
+            process_image = pytesseract.image_to_data(
+                i, output_type=Output.DICT)
+            process_image = {os.path.basename(input_file): [{'Confidence Score': conf, 'Text': text,
+                                                            'Line no.': line_no, 'Top': top, 'Left':
+                                                             left, } for conf, text, line_no,
+                                                            top, left in zip(process_image['conf'],
+                                                                             process_image['text'],
+                                                                             process_image['line_num'],
+                                                                             process_image['top'],
+                                                                             process_image['left'])]}
+            with open(OUTPUT_PATH+'/' + output_filename+str(counter)+'.json', 'w') as f:
+                json.dump(process_image, f, indent=4)
+            counter += 1
 
-            # json.dump({'text': text, 'line no': lineno},f,indent=4)
-            # f.write(json.dumps({'text': text, 'line no': lineno}))
+    def zip_processing(self, input_file):
+        """
+        zip processing
 
-print(SUCCESS)
+        Args:
+            input_file (str): input file name
+        """
+        inp_file = input_file
+        with zipfile.ZipFile(INPUT_PATH+'/' + inp_file, mode="r") as archive:
+            archive.printdir()
+            for file in archive.namelist():
+                archive.extract(file, "/tmp")
+                output_filename = os.path.splitext(file)[0]
+                process_image = pytesseract.image_to_data(
+                    "/tmp/"+file, output_type=Output.DICT)
+                with open(OUTPUT_PATH+'/' + output_filename+'.json', 'w') as f:
+                    process_image = {os.path.basename(file): [{'Confidence Score': conf,
+                                                              'Text': text, 'Line no.': line_no,
+                                                               'Top': top, 'Left': left, }
+                                                              for conf, text, line_no, top,
+                                                              left in zip(process_image['conf'],
+                                                                          process_image['text'],
+                                                              process_image['line_num'],
+                                                              process_image['top'],
+                                                              process_image['left'])]}
+                    json.dump(process_image, f, indent=4)
+
 
