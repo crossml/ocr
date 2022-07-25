@@ -52,8 +52,8 @@ class Easyocrpipleline:
             reader (object): easy ocr object
         """
         reader = easyocr.Reader(['hi', 'en'])
-        result = reader.readtext(path, width_ths=0)
-        self.create_json(result, path)
+        result = reader.readtext(path, width_ths=0)  # read text of given image
+        self.create_json(result, path)  # create json
 
     def tif_image_process(self, path):
         """
@@ -63,8 +63,12 @@ class Easyocrpipleline:
              path (string): file path
             reader (object): easy ocr object
         """
-        tif_file = cv2.imread(path)
-        self.image_process(tif_file)
+        reader = easyocr.Reader(['hi', 'en'])
+        tif_file = cv2.imread(path) #in case of tif
+        result = reader.readtext(tif_file,width_ths=0)
+        self.create_json(result, path)
+
+
 
     def pdf_process(self, path):
         """
@@ -74,12 +78,14 @@ class Easyocrpipleline:
             path (string): file path
             reader (object): easy ocr object
         """
-        images = convert_from_path(path)
+        images = convert_from_path(path)  # convert pdf into images
         file_name = path.split('/')[-1]
         file_name = file_name.split('.')[0]
+        # make json log of each page of pdf file
         for index, image in enumerate(images):
             path = 'folder/'+file_name+'('+str(index)+').jpg'
             image.save(path)
+            # function to read the image and create json
             self.image_process(path)
 
     def zip_process(self, path):
@@ -90,12 +96,12 @@ class Easyocrpipleline:
              path (string): file path
             reader (object): easy ocr object
         """
-        with ZipFile(path, 'r') as zip_file:
+        with ZipFile(path, 'r') as zip_file:  # read zip file
             # read each file of zip one by one
-            for file in zip_file.namelist():
-                zip_file.extract(file, "")
+            for file in zip_file.namelist():  # iterate over zip file
+                zip_file.extract(file, "")  # extract file one by one in zip
                 extension = os.path.splitext(file)[-1].lower()
-                if extension in EXTENSION_LIST:
+                if extension in EXTENSION_LIST:  # check extension of file
                     self.image_process(file)
                 elif extension == '.tif':
                     self.tif_image_process(file)
@@ -112,8 +118,8 @@ def detectextention(path):
     Args:
         path (string): file name
     """
-    process = Easyocrpipleline()# create object of Easyocrpipleline class
-    if os.path.isfile(path): #check file extension
+    process = Easyocrpipleline()  # create object of Easyocrpipleline class
+    if os.path.isfile(path):  # check file extension
         if path.lower().endswith(('jpg', 'jpeg', 'png')):
             process.image_process(path)
         elif path.lower().endswith(('tif')):
@@ -124,5 +130,5 @@ def detectextention(path):
             process.zip_process(path)
 
 
-PATH = 'Yakul.png' #file path
-detectextention(PATH) #call detectextention function
+PATH = 'Yakul.png'  # file path
+detectextention(PATH)  # call detectextention function
