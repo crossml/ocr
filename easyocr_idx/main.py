@@ -1,118 +1,128 @@
-from curses import beep
+"""
+easyocr pipline
+"""
 import json
-# from lib2to3.pytree import convert
-import easyocr
-import cv2
-from matplotlib import pyplot as plt
 import os
 from zipfile import ZipFile
-from pdf2image import convert_from_path  
-import shutil, os
-import re
-import urllib.request
+import easyocr
+import cv2
+from pdf2image import convert_from_path
+from config import EXTENSION_LIST
 
 
-EXTENSION_LIST = ('.pdf', '.png', '.jpg', '.tif', '.jpeg')
 # function to create json output and store in json file
-def create_json(result,file):
-    def convert_rec(x):
-        if isinstance(x, list):
-            return list(map(convert_rec, x))
-        else:
-            return int(x)
-    dictionary={}       
-    for i,item in enumerate(result):
-        top_left=convert_rec(result[i][0])
-        dictionary[result[i][1]] = {}
-        dictionary[result[i][1]]["top"]=convert_rec(result[i][0][0])
-        dictionary[result[i][1]]["left"]=convert_rec(result[i][0][1])
-        dictionary[result[i][1]]["right"]=convert_rec(result[i][0][2])
-        dictionary[result[i][1]]["bottom"]=convert_rec(result[i][0][3])
-        dictionary[result[i][1]]["score"]=result[i][2]
-        print(dictionary)
-    json_name=(file.split('/')[1]).rsplit('.', 1)[0]
-    with open("log/"+json_name+".json", "w") as outfile:
-        json.dump(dictionary, outfile)
 
+class Easyocrpipleline:
+    """
+    Easy ocr pipeline
+    """
 
-
-def image_read():
-    directory = 'folder'
-    for filename in os.listdir(directory):
-        f = os.path.join(directory, filename)
-        if os.path.isfile(f):
-            reader = easyocr.Reader(['hi','en']) # this needs to run only once to load the model into memory
-            if f.lower().endswith(('.tif')):
-                tif_file = cv2.imread(f) #in case of tif
-                result = reader.readtext(tif_file,width_ths=0)
+    def create_json(self, result, file):
+        """
+        json file save
+        """
+        def convert_rec(input_dict):
+            """
+            input input dict integer
+            """
+            if isinstance(input_dict, list):
+                return list(map(convert_rec, input_dict))
             else:
-                result = reader.readtext(f,width_ths=0)
-            
-            create_json(result,f)
+                return int(input_dict)
+        dictionary = {}
+        # create proper json to store in json file
+        for i, item in enumerate(result):
+            dictionary[result[i][1]] = {}
+            dictionary[result[i][1]]["top"] = convert_rec(result[i][0][0])
+            dictionary[result[i][1]]["left"] = convert_rec(result[i][0][1])
+            dictionary[result[i][1]]["right"] = convert_rec(result[i][0][2])
+            dictionary[result[i][1]]["bottom"] = convert_rec(result[i][0][3])
+            dictionary[result[i][1]]["score"] = result[i][2]
+        json_name = file.split('/')[-1].split('.')[0]
+        # json log file create
+        with open("log/"+json_name+".json", "w") as outfile:
+            json.dump(dictionary, outfile)
+
+    def image_process(self, path):
+        """
+        image process method
+
+        Args:
+            path (string): file path
+            reader (object): easy ocr object
+        """
+        reader = easyocr.Reader(['hi', 'en'])
+        result = reader.readtext(path, width_ths=0)
+        self.create_json(result, path)
+
+    def tif_image_process(self, path):
+        """
+        Tif image process
+
+        Args:
+             path (string): file path
+            reader (object): easy ocr object
+        """
+        tif_file = cv2.imread(path)
+        self.image_process(tif_file)
+
+    def pdf_process(self, path):
+        """
+        PDF processing
+
+        Args:
+            path (string): file path
+            reader (object): easy ocr object
+        """
+        images = convert_from_path(path)
+        file_name = path.split('/')[-1]
+        file_name = file_name.split('.')[0]
+        for index, image in enumerate(images):
+            path = 'folder/'+file_name+'('+str(index)+').jpg'
+            image.save(path)
+            self.image_process(path)
+
+    def zip_process(self, path):
+        """
+        zip processing method
+
+        Args:
+             path (string): file path
+            reader (object): easy ocr object
+        """
+        with ZipFile(path, 'r') as zip_file:
+            # read each file of zip one by one
+            for file in zip_file.namelist():
+                zip_file.extract(file, "")
+                extension = os.path.splitext(file)[-1].lower()
+                if extension in EXTENSION_LIST:
+                    self.image_process(file)
+                elif extension == '.tif':
+                    self.tif_image_process(file)
+                elif extension == '.pdf':
+                    self.pdf_process(file)
+                else:
+                    print("wrong extension in zip")
 
 
-def pdf_to_image(images,file_name):
-    file_name=file_name.split('/')[-1]
-    file_name=file_name.split('.')[0]
-    for index,image in enumerate(images):
-        filename = str(image) + ".jpg" 
-        image.save('folder/'+file_name+'('+str(index)+').jpg')
+def detectextention(path):
+    """
+    Function to check file extension and get text from the image
+
+    Args:
+        path (string): file name
+    """
+    process = Easyocrpipleline()# create object of Easyocrpipleline class
+    if os.path.isfile(path): #check file extension
+        if path.lower().endswith(('jpg', 'jpeg', 'png')):
+            process.image_process(path)
+        elif path.lower().endswith(('tif')):
+            process.tif_image_process(path)
+        if path.lower().endswith(('pdf')):
+            process.pdf_process(path)
+        if path.lower().endswith(('.zip')):
+            process.zip_process(path)
 
 
-
-# code to download image form given link
-# opener=urllib.request.build_opener()
-# opener.addheaders=[('User-Agent','Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1941.0 Safari/537.36')]
-# urllib.request.install_opener(opener)
-# filename = 'sunshine_dog.jpg'
-# path='https://cdn.pixabay.com/photo/2018/04/26/16/39/beach-3352363_960_720.jpg'
-# filename=path.split('/')[-1]
-# dir = 'folder/'
-# for file in os.scandir(dir):
-#     os.remove(file.path)
-# urllib.request.urlretrieve(path, 'folder/'+filename)
-# path='folder/'+filename
-# path='file_folder/'
-# path='test.zip'
-path='folder/33.png'
-# path='file_folder/pdfzip.zip'
-# path='Resume.pdf'
-folder = os.listdir('file_folder/')
-# loop for if folder is given in input
-if os.path.isdir(path):
-    ext=all(file.lower().endswith(EXTENSION_LIST) for file in folder)
-    if ext:
-        for file_name in folder:
-            if file_name.lower().endswith(('.pdf')):
-                images=convert_from_path("file_folder/"+file_name)
-                pdf_to_image(images,file_name)
-            elif file_name.lower().endswith(('.jpg','jpeg','tif','png')):
-                shutil.copy('file_folder/'+file_name, 'folder')
-        image_read()
-    else:
-        print("invalid file extension")
-elif os.path.isfile(path):
-    # loop for file in input
-    if path.lower().endswith(('jpg','jpeg','png','tif')):
-        reader = easyocr.Reader(['hi','en'])
-        result = reader.readtext(path,width_ths=0)
-        print(result)
-        create_json(result,path)
-    elif path.lower().endswith(('pdf')):
-        images=convert_from_path(path)
-        file_name=(path).rsplit('.', 1)[0]
-        pdf_to_image(images,file_name)
-        image_read() 
-    elif path.lower().endswith(('.zip')):
-        with ZipFile(path, 'r') as zip:
-            zip.printdir()
-            zip.extractall(path='folder')
-        folder = os.listdir('folder/')
-        for file_name in folder:
-            if file_name.lower().endswith(('.pdf')):
-                images=convert_from_path("folder/"+file_name)
-                pdf_to_image(images,file_name)
-                os.remove('folder/'+file_name)
-        image_read()
-    else:
-        print("wrong extension")
+PATH = 'Yakul.png' #file path
+detectextention(PATH) #call detectextention function
