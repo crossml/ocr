@@ -2,6 +2,5 @@
 configuration file for tessaract ocr
 """
 
-INPUT_PATH = '/home/sourav/project/OCR/'
-OUTPUT_PATH = '/home/sourav/project/OCR/json_dir'
+OUTPUT_PATH = '/tmp/'
 EXTENSION_LIST = ['.png', '.jpg', '.tif', '.jpeg']
