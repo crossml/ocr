@@ -1,7 +1,6 @@
 """
 tessaract ocr pipeline
 """
-import imp
 import os
 import json
 import zipfile
@@ -51,8 +50,7 @@ class TessaractOcr:
         """
         try:
             # removing extension from input file name for output file initial name
-            file_name = file_name.split('/')[-1]
-
+            file_name = os.path.basename(file_name)
             output_filename = os.path.splitext(file_name)[0]
             # processing image using Tessaract Ocr
             process_image = pytesseract.image_to_data(
@@ -72,7 +70,7 @@ class TessaractOcr:
                                                  process_image['top'],
                                                  process_image['left'])]}
                 json.dump(output_json, f, indent=4)
-                path = outs+'/'+output_filename+'.jpg'
+                path = outs+output_filename+'('+str(index)+').jpg'
                 image.save(path)
 
             upload_file_to_s3(outs)
@@ -103,7 +101,7 @@ class TessaractOcr:
         """
         try:
             images = convert_from_path(input_file)
-            file_name = input_file.split('/')[-1]
+            file_name = os.path.basename(input_file)
             file_name = file_name.split('.')[0]
             for index, image in enumerate(images):
                 self.extract_text_from_image(image, input_file, index)
@@ -118,9 +116,8 @@ class TessaractOcr:
             input_file (str): input file name
         """
         try:
-            inp_file = input_file
             # reading zip file
-            with zipfile.ZipFile(inp_file, mode="r") as file_list:
+            with zipfile.ZipFile(input_file, mode="r") as file_list:
                 # getting list of file inside zip
                 # iterating over each file of zip
                 for file in file_list.namelist():
@@ -131,7 +128,9 @@ class TessaractOcr:
                     if extension in EXTENSION_LIST:
                         self.image_processing(OUTPUT_PATH+file)
                     # else calling pdf procssing
-                    else:
+                    elif extension == '.pdf':
                         self.pdf_processing(OUTPUT_PATH+file)
+                    else:
+                        return "Invalid extension"
         except Exception as error:
             return error
