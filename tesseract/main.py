@@ -18,21 +18,19 @@ S3 = SESSION.resource('s3')
 OUTPUT_PATH = '/tmp/'
 
 
-def upload_file_to_s3(local_folder_path):
+def upload_file_to_s3(local_file_path):
     """
-        Upload File to s3
+    Upload files to s3
 
     Args:
-        local_file_path (str): folder path
+        local_file_path (str): file path
 
     """
     try:
         # saving file to s3
-        for filename in os.listdir(local_folder_path):
-
+        for filename in os.listdir(local_file_path):
             S3.meta.client.upload_file(
-                local_folder_path+filename, "input-adaptor", local_folder_path+filename)
-        # return INPUT_FILE_FOLDER + os.path.basename(local_file_path)
+                local_file_path+filename, "input-adaptor", local_file_path+filename)
     except Exception as error:
         return error
 
@@ -53,6 +51,8 @@ class TessaractOcr:
         """
         try:
             # removing extension from input file name for output file initial name
+            file_name = file_name.split('/')[-1]
+
             output_filename = os.path.splitext(file_name)[0]
             # processing image using Tessaract Ocr
             process_image = pytesseract.image_to_data(
@@ -72,9 +72,8 @@ class TessaractOcr:
                                                  process_image['top'],
                                                  process_image['left'])]}
                 json.dump(output_json, f, indent=4)
-                path = outs+output_filename+'('+str(index)+').jpg'
+                path = outs+'/'+output_filename+'.jpg'
                 image.save(path)
-                print(outs)
 
             upload_file_to_s3(outs)
         except Exception as error:
@@ -125,18 +124,14 @@ class TessaractOcr:
                 # getting list of file inside zip
                 # iterating over each file of zip
                 for file in file_list.namelist():
-                    file_list.extract(file, "")  # saving file
+                    file_list.extract(file, OUTPUT_PATH)  # saving file
                     # getting extension of file
                     extension = os.path.splitext(file)[-1].lower()
                     # if extesnion is image then calling image processing
                     if extension in EXTENSION_LIST:
-                        self.image_processing(file)
+                        self.image_processing(OUTPUT_PATH+file)
                     # else calling pdf procssing
                     else:
-                        self.pdf_processing(file)
+                        self.pdf_processing(OUTPUT_PATH+file)
         except Exception as error:
             return error
-
-
-input_values = TessaractOcr()
-input_values.zip_processing('t2.zip')
