@@ -1,45 +1,76 @@
-import json
 """
 easyocr pipline
 """
 import json
 import os
-from re import T
 from zipfile import ZipFile
 import shutil
-from cv2 import boundingRect
 import easyocr
 import cv2
 from pdf2image import convert_from_path
+import boto3
 from PIL import Image
+
+
 EXTENSION_LIST = ['.png', '.jpg', '.jpeg']
 
-import boto3
 SESSION = boto3.Session()
 S3 = SESSION.resource('s3')
-
 S3_JSON_SESSION = boto3.client('s3')
-# function to create json output and store in json file
 
 
-def upload_file_to_s3(local_file_path, json_path):
+def upload_file_to_s3(main_folder, path):
     """
     Upload File to s3
     """
     try:
-        # saving file to s3
-        S3.meta.client.upload_file(
-            local_file_path, 'input-adaptor', json_path+'.'+local_file_path.split('/')[-1].split('.')[-1])
+        json_path = os.path.join(main_folder, path.split('.')[0])
+        for file in os.listdir(json_path):
+            S3.meta.client.upload_file(
+                json_path+'/'+file, 'input-adaptor', json_path+'/'+file)
     except Exception as error:
         return error
 
-# function to create json output and store in json file
+
+def download_directory(bucketname, remotedirectoryname):
+    """
+    download the s3 folder
+
+    Args:
+        bucketname (_type_): bucket name
+        remotedirectoryname (_type_): directory path
+    """
+    s3_resource = boto3.resource('s3')
+    bucket = s3_resource.Bucket(bucketname)
+    for obj in bucket.objects.filter(Prefix=remotedirectoryname):
+        if not os.path.exists(os.path.dirname(obj.key)):
+            os.makedirs(os.path.dirname(obj.key))
+        bucket.download_file(obj.key, obj.key)
 
 
 class Easyocrpipleline:
     """
     Easy ocr pipeline
     """
+    main_folder = 'main_folder/'
+    folder_path = 'folder/'
+
+    def file_create(self, zip_dir_path, json_name, file, dictionary):
+        """
+        To create a file
+
+        Args:
+            zip_dir_path (_type_): zip path
+            json_name (_type_): json file name
+            file (_type_): file path in zip
+            dictionary (_type_): json to write in file
+        """
+        if not os.path.exists(zip_dir_path):
+            os.makedirs(zip_dir_path)
+        shutil.copy(file, zip_dir_path)
+        json_path = os.path.join(zip_dir_path, json_name)
+        with open(json_path+".json", "w") as outfile:
+            json.dump(dictionary, outfile)
 
     def create_json(self, result, file, file_pdf='', file_zip=''):
         """
@@ -64,43 +95,20 @@ class Easyocrpipleline:
             dictionary[result[i][1]]["score"] = result[i][2]
         json_name = file.split('/')[-1].split('.')[0]
         file_pdf_name = file_pdf.split('/')[-1].split('.')[0]
-        file_zip_name = file_zip.split('/')[-1].split('.')[0]
-        pdf_dir_path = '/main_folder/'+file_pdf_name
-        zip_dir_path = '/main_folder/'+file_zip_name
-        print('file=',file)
-        print('file_pdf=',file_pdf)
-        print('zip_dir_path=',zip_dir_path)
-        print('json_name=',json_name)
-
-        def file_create(zip_dir_path, json_name):
-            if not os.path.exists(zip_dir_path):
-                os.makedirs(zip_dir_path)
-            shutil.copy(file, zip_dir_path)
-            json_path = os.path.join(zip_dir_path, json_name)
-            upload_file_to_s3(file, json_path)
-            print('json_path=',json_path)
-
-            with open(json_path+".json", "w") as outfile:
-                S3_JSON_SESSION.put_object(
-                    Body=json.dumps(dictionary),
-                    Bucket='input-adaptor',
-                    Key=json_path+'.json'
-                )
-                json.dump(dictionary, outfile)
+        pdf_dir_path = os.path.join(self.main_folder, file_pdf_name)
         if file_zip != '':
             if file_pdf_name != '':
                 zip_pdf_dir_path = os.path.join(
-                    zip_dir_path, file_pdf_name, json_name)
-                file_create(zip_pdf_dir_path, json_name)
+                    self.main_folder, file_pdf_name)
+                self.file_create(zip_pdf_dir_path, json_name, file, dictionary)
             else:
-                zip_dir_path = os.path.join(zip_dir_path, json_name)
-                file_create(zip_dir_path, json_name)
+                zip_dir_path = os.path.join(self.main_folder, json_name)
+                self.file_create(zip_dir_path, json_name, file, dictionary)
         elif file_pdf != '':
-            pdf_dir_path = os.path.join(pdf_dir_path, json_name)
-            file_create(pdf_dir_path, json_name)
+            self.file_create(pdf_dir_path, json_name, file, dictionary)
         else:
-            main_path = os.path.join('/main_folder/', json_name)
-            file_create(main_path, json_name)
+            zip_pdf_dir_path = os.path.join(self.main_folder, json_name)
+            self.file_create(zip_pdf_dir_path, json_name, file, dictionary)
 
     def image_process(self, path, file_pdf='', file_zip=''):
         """
@@ -113,6 +121,7 @@ class Easyocrpipleline:
         reader = easyocr.Reader(['hi', 'en'])
         result = reader.readtext(path, width_ths=0)
         self.create_json(result, path, file_pdf, file_zip)
+        upload_file_to_s3(self.main_folder, path)
 
     def tif_image_process(self, path, file_zip=''):
         """
@@ -132,11 +141,13 @@ class Easyocrpipleline:
                 tif_file_path = path
             else:
                 img.seek(i)
-                tif_file_path = os.path.join('/folder/'+tif_file_name+'('+str(i)+').tif')
+                tif_file_path = os.path.join(
+                    self.folder_path+tif_file_name+'('+str(i)+').tif')
                 img.save(tif_file_path)
             tif_file = cv2.imread(tif_file_path)
             result = reader.readtext(tif_file, width_ths=0)
             self.create_json(result, tif_file_path, file_pdf, file_zip)
+        upload_file_to_s3(self.main_folder, path)
 
     def pdf_process(self, path, file_zip=''):
         """
@@ -148,18 +159,12 @@ class Easyocrpipleline:
         """
         file_pdf = path
         images = convert_from_path(path)
-        file_name = path.split('/')[-1]
-        file_name = file_name.split('.')[0]
-        print(file_name,'+++')
-        print(path)
+        file_name = path.split('/')[-1].split('.')[0]
         for index, image in enumerate(images):
-            path = '/folder/'+file_name+'('+str(index)+').jpg'
-            print(path,'path')
+            path = self.folder_path+file_name+'('+str(index)+').jpg'
             image.save(path)
             self.image_process(path, file_pdf, file_zip)
-
-
-
+        upload_file_to_s3(self.main_folder, file_name)
 
     def zip_process(self, path):
         """
@@ -171,7 +176,6 @@ class Easyocrpipleline:
         """
         file_zip = path
         with ZipFile(path, 'r') as zip_file:
-            # read each file of zip one by one
             for file in zip_file.namelist():
                 zip_file.extract(file, "")
                 extension = os.path.splitext(file)[-1].lower()
@@ -190,8 +194,8 @@ def detectextention(path):
     Args:
         path (string): file name
     """
-    process = Easyocrpipleline()  # create object of Easyocrpipleline class
-    if os.path.isfile(path):  # check file extension
+    process = Easyocrpipleline()
+    if os.path.isfile(path):
         if path.lower().endswith(('jpg', 'jpeg', 'png')):
             process.image_process(path)
         elif path.lower().endswith(('tif')):
@@ -202,41 +206,13 @@ def detectextention(path):
             process.zip_process(path)
 
 
- # call detectextention function
-
-
-
-
-def lambda_handler(event, context):
-    """Sample pure Lambda function
-
-    Parameters
-    ----------
-    event: dict, required
-        API Gateway Lambda Proxy Input Format
-
-        Event doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html#api-gateway-simple-proxy-for-lambda-input-format
-
-    context: object, required
-        Lambda Context runtime methods and attributes
-
-        Context doc: https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html
-
-    Returns
-    ------
-    API Gateway Lambda Proxy Output Format: dict
-
-        Return doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html
-    """
-    PATH = 'Yakul.png'  # file path
-    process = Easyocrpipleline()
-    process.image_process(PATH)
-
-    return {
-        "statusCode": 200,
-        "body": json.dumps(
-            {
-                "message": "hello world",
-            }
-        ),
-    }
+download_directory('input-adaptor','main_folder/1')
+# PATH = 'Resume.pdf'
+# PATH = '0981797000(1).tif'
+# PATH = 't3.zip'
+# PATH = '@#@$#$^#$%.png'
+process = Easyocrpipleline()
+# process.tif_image_process(PATH)
+# process.zip_process(PATH)
+# process.image_process(PATH)
+# process.pdf_process(PATH)
