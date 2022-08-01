@@ -1,6 +1,7 @@
 """
 easyocr pipline
 """
+from curses import beep
 import json
 import os
 from zipfile import ZipFile
@@ -19,16 +20,16 @@ S3 = SESSION.resource('s3')
 S3_JSON_SESSION = boto3.client('s3')
 
 
-def upload_file_to_s3(main_folder, path):
+def upload_file_to_s3(json_path):
     """
     Upload File to s3
     """
     try:
-        json_path = os.path.join(main_folder, path.split('.')[0])
         for file in os.listdir(json_path):
             S3.meta.client.upload_file(
                 json_path+'/'+file, 'input-adaptor', json_path+'/'+file)
     except Exception as error:
+        print ("An error occurred in upload file to s3")
         return error
 
 
@@ -40,12 +41,16 @@ def download_directory(bucketname, remotedirectoryname):
         bucketname (_type_): bucket name
         remotedirectoryname (_type_): directory path
     """
-    s3_resource = boto3.resource('s3')
-    bucket = s3_resource.Bucket(bucketname)
-    for obj in bucket.objects.filter(Prefix=remotedirectoryname):
-        if not os.path.exists(os.path.dirname(obj.key)):
-            os.makedirs(os.path.dirname(obj.key))
-        bucket.download_file(obj.key, obj.key)
+    try:
+        s3_resource = boto3.resource('s3')
+        bucket = s3_resource.Bucket(bucketname)
+        for obj in bucket.objects.filter(Prefix=remotedirectoryname):
+            if not os.path.exists(os.path.dirname(obj.key)):
+                os.makedirs(os.path.dirname(obj.key))
+            bucket.download_file(obj.key, obj.key)
+    except Exception as error:
+        print ("An error occurred in download folder")
+        return error
 
 
 class Easyocrpipleline:
@@ -98,8 +103,7 @@ class Easyocrpipleline:
         pdf_dir_path = os.path.join(self.main_folder, file_pdf_name)
         if file_zip != '':
             if file_pdf_name != '':
-                zip_pdf_dir_path = os.path.join(
-                    self.main_folder, file_pdf_name)
+                zip_pdf_dir_path = os.path.join(self.main_folder, file_pdf_name)
                 self.file_create(zip_pdf_dir_path, json_name, file, dictionary)
             else:
                 zip_dir_path = os.path.join(self.main_folder, json_name)
@@ -118,10 +122,20 @@ class Easyocrpipleline:
             path (string): file path
             reader (object): easy ocr object
         """
-        reader = easyocr.Reader(['hi', 'en'])
-        result = reader.readtext(path, width_ths=0)
-        self.create_json(result, path, file_pdf, file_zip)
-        upload_file_to_s3(self.main_folder, path)
+        try:
+            # create object of easy ocr to read from image
+            reader = easyocr.Reader(['hi', 'en'])
+            # read the image data
+            result = reader.readtext(path, width_ths=0)
+            # function to create json
+            self.create_json(result, path, file_pdf, file_zip)
+            if file_pdf=='':
+                main_path=os.path.join(self.main_folder,path.split('.')[0])
+                upload_file_to_s3(main_path)
+            # upload folder into s3
+        except Exception as error:
+            print ("An error occurred in image process")
+            return error
 
     def tif_image_process(self, path, file_zip=''):
         """
@@ -131,23 +145,35 @@ class Easyocrpipleline:
              path (string): file path
             reader (object): easy ocr object
         """
-        file_pdf = path
-        img = Image.open(path)
-        reader = easyocr.Reader(['hi', 'en'])
-        tif_file_name = path.split('.tif')[0]
-        for i in range(img.n_frames):
-            if img.n_frames == 1:
-                tif_file = cv2.imread(path)
-                tif_file_path = path
-            else:
-                img.seek(i)
-                tif_file_path = os.path.join(
-                    self.folder_path+tif_file_name+'('+str(i)+').tif')
-                img.save(tif_file_path)
-            tif_file = cv2.imread(tif_file_path)
-            result = reader.readtext(tif_file, width_ths=0)
-            self.create_json(result, tif_file_path, file_pdf, file_zip)
-        upload_file_to_s3(self.main_folder, path)
+        try:
+            file_pdf = path
+            img = Image.open(path)
+            # create object of easy ocr to read from image
+            reader = easyocr.Reader(['hi', 'en'])
+            # get file name without extension
+            tif_file_name = path.split('.tif')[0]
+            # iterate the each page of tif
+            for i in range(img.n_frames):
+                if img.n_frames == 1:
+                    tif_file = cv2.imread(path)
+                    tif_file_path = path
+                else:
+                    img.seek(i)
+                    tif_file_path = os.path.join(
+                        self.folder_path+tif_file_name+'('+str(i)+').tif')
+                    # save each page of image
+                    img.save(tif_file_path)
+                tif_file = cv2.imread(tif_file_path)
+                # read the image data
+                result = reader.readtext(tif_file, width_ths=0)
+                # function to create json
+                self.create_json(result, tif_file_path, file_pdf, file_zip)
+            main_path=os.path.join(self.main_folder,path.split('.')[0])
+            # upload folder into s3
+            upload_file_to_s3(main_path)
+        except Exception as error:
+            print ("An error occurred in tif process")
+            return error
 
     def pdf_process(self, path, file_zip=''):
         """
@@ -157,14 +183,24 @@ class Easyocrpipleline:
             path (string): file path
             reader (object): easy ocr object
         """
-        file_pdf = path
-        images = convert_from_path(path)
-        file_name = path.split('/')[-1].split('.')[0]
-        for index, image in enumerate(images):
-            path = self.folder_path+file_name+'('+str(index)+').jpg'
-            image.save(path)
-            self.image_process(path, file_pdf, file_zip)
-        upload_file_to_s3(self.main_folder, file_name)
+        try:
+            file_pdf = path
+            images = convert_from_path(path)
+            # get the image name without image extension
+            file_name = path.split('/')[-1].split('.')[0]
+            # iterate the each page of pdf
+            for index, image in enumerate(images):
+                path = self.folder_path+file_name+'('+str(index)+').jpg'
+                # save each page of image
+                image.save(path)
+                # read each page of pdf
+                self.image_process(path, file_pdf, file_zip)
+            main_path=os.path.join(self.main_folder,file_name)
+            # upload folder into s3
+            upload_file_to_s3(main_path)
+        except Exception as error:
+            print ("An error occurred in pdf process")
+            return error
 
     def zip_process(self, path):
         """
@@ -174,45 +210,32 @@ class Easyocrpipleline:
             path (string): file path
             reader (object): easy ocr object
         """
-        file_zip = path
-        with ZipFile(path, 'r') as zip_file:
-            for file in zip_file.namelist():
-                zip_file.extract(file, "")
-                extension = os.path.splitext(file)[-1].lower()
-                if extension in EXTENSION_LIST:
-                    self.image_process(file, file_zip=file_zip)
-                elif extension == '.tif':
-                    self.tif_image_process(file, file_zip)
-                elif extension == '.pdf':
-                    self.pdf_process(file, file_zip)
+        try:
+            file_zip = path
+            # read the zip file
+            with ZipFile(path, 'r') as zip_file:
+                for file in zip_file.namelist():
+                    zip_file.extract(file, "")
+                    extension = os.path.splitext(file)[-1].lower()
+                    if extension in EXTENSION_LIST:
+                        self.image_process(file, file_zip=file_zip)
+                    elif extension == '.tif':
+                        self.tif_image_process(file, file_zip)
+                    elif extension == '.pdf':
+                        self.pdf_process(file, file_zip)
+        except Exception as error:
+            print ("An error occurred in zip process")
+            return error
 
 
-def detectextention(path):
-    """
-    Function to check file extension and get text from the image
 
-    Args:
-        path (string): file name
-    """
-    process = Easyocrpipleline()
-    if os.path.isfile(path):
-        if path.lower().endswith(('jpg', 'jpeg', 'png')):
-            process.image_process(path)
-        elif path.lower().endswith(('tif')):
-            process.tif_image_process(path)
-        if path.lower().endswith(('pdf')):
-            process.pdf_process(path)
-        if path.lower().endswith(('.zip')):
-            process.zip_process(path)
-
-
-download_directory('input-adaptor','main_folder/1')
+# download_directory('input-adaptor','main_folder/1')
 # PATH = 'Resume.pdf'
-# PATH = '0981797000(1).tif'
-# PATH = 't3.zip'
+# PATH = 'ICA_101_555090004.tif'
+PATH = 't2.zip'
 # PATH = '@#@$#$^#$%.png'
 process = Easyocrpipleline()
 # process.tif_image_process(PATH)
-# process.zip_process(PATH)
+process.zip_process(PATH)
 # process.image_process(PATH)
 # process.pdf_process(PATH)
