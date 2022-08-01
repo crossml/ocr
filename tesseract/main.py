@@ -1,6 +1,7 @@
 """
 tessaract ocr pipeline
 """
+import imp
 import os
 import json
 import zipfile
@@ -9,13 +10,12 @@ import pytesseract
 from pytesseract import Output
 from PIL import Image, ImageSequence
 from pdf2image import convert_from_path
-
+from config import OUTPUT_PATH
 from config import EXTENSION_LIST
 
 
 SESSION = boto3.Session()
 S3 = SESSION.resource('s3')
-OUTPUT_PATH = '/tmp/'
 
 
 def upload_file_to_s3(local_file_path):
