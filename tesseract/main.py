@@ -55,21 +55,23 @@ class TessaractOcr:
             # processing image using Tessaract Ocr
             process_image = pytesseract.image_to_data(
                 image, output_type=Output.DICT)
-            temp_path= OUTPUT_PATH+output_filename
+            temp_path = OUTPUT_PATH+output_filename
             if not os.path.exists(temp_path):
                 os.makedirs(OUTPUT_PATH+output_filename)
             # writing output to json file
             with open(temp_path+'/' + output_filename+'('+str(index) + ')' + '.json', 'w') as f:
                 json_list = []
                 for conf, text, line_no, top, left in zip(process_image.get('conf'),
-                                                          process_image.get('text'),
-                                                          process_image.get('line_num'),
-                                                          process_image.get('top'),
+                                                          process_image.get(
+                                                              'text'),
+                                                          process_image.get(
+                                                              'line_num'),
+                                                          process_image.get(
+                                                              'top'),
                                                           process_image.get('left')):
                     output_json = {'Confidence Score': conf, 'Text': text,
                                    'Line no.': line_no, 'Top': top, 'Left':
                                    left, }
-                    print(output_json)
                     json_list.append(output_json)
                 f.write(json.dumps(json_list))
                 path = temp_path+'/'+output_filename+'('+str(index)+').jpg'
@@ -103,8 +105,6 @@ class TessaractOcr:
         """
         try:
             images = convert_from_path(input_file)
-            file_name = os.path.basename(input_file)
-            file_name = file_name.splitext('.')[0]
             for index, image in enumerate(images):
                 self.extract_text_from_image(image, input_file, index)
         except Exception as error:
