@@ -61,18 +61,22 @@ class TessaractOcr:
             # writing output to json file
             with open(temp_path+'/' + output_filename+'('+str(index) + ')' + '.json', 'w') as f:
                 json_list = []
-                for conf, text, line_no, top, left in zip(process_image.get('conf'),
-                                                          process_image.get(
-                                                              'text'),
-                                                          process_image.get(
-                                                              'line_num'),
-                                                          process_image.get(
-                                                              'top'),
-                                                          process_image.get('left')):
-                    output_json = {'Confidence Score': conf, 'Text': text,
-                                   'Line no.': line_no, 'Top': top, 'Left':
-                                   left, }
-                    json_list.append(output_json)
+                for left, top, width, height, text, conf in zip(process_image.get('left'),
+                                                                process_image.get(
+                                                                    'top'),
+                                                                process_image.get(
+                                                                    'width'),
+                                                                process_image.get(
+                                                                    'height'),
+                                                                process_image.get(
+                                                                    'text'),
+                                                                process_image.get('conf')):
+                    # removing empty values from output
+                    if conf > "0":
+                        output_json = {'left': left, 'top': top, 'right': left+width,
+                                       'bottom': top+height, 'text': text, 'confidence':
+                                       round(float(conf), 2)}
+                        json_list.append(output_json)
                 f.write(json.dumps(json_list))
                 path = temp_path+'/'+output_filename+'('+str(index)+').jpg'
                 image.save(path)
