@@ -11,7 +11,7 @@ from PIL import Image, ImageSequence
 from pdf2image import convert_from_path
 from config import OUTPUT_PATH
 from config import EXTENSION_LIST
-
+from config import S3_BUCKET_NAME
 
 SESSION = boto3.Session()
 S3 = SESSION.resource('s3')
@@ -29,7 +29,7 @@ def upload_file_to_s3(local_file_path):
         # saving file to s3
         for filename in os.listdir(local_file_path):
             S3.meta.client.upload_file(
-                local_file_path+'/'+filename, "input-adaptor", local_file_path+'/'+filename)
+                local_file_path+'/'+filename, S3_BUCKET_NAME , local_file_path+'/'+filename)
     except Exception as error:
         return error
 
