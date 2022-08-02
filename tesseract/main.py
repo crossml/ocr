@@ -29,7 +29,7 @@ def upload_file_to_s3(local_file_path):
         # saving file to s3
         for filename in os.listdir(local_file_path):
             S3.meta.client.upload_file(
-                local_file_path+filename, "input-adaptor", local_file_path+filename)
+                local_file_path+'/'+filename, "input-adaptor", local_file_path+'/'+filename)
     except Exception as error:
         return error
 
@@ -55,25 +55,27 @@ class TessaractOcr:
             # processing image using Tessaract Ocr
             process_image = pytesseract.image_to_data(
                 image, output_type=Output.DICT)
-            if not os.path.exists(OUTPUT_PATH+output_filename):
+            temp_path= OUTPUT_PATH+output_filename
+            if not os.path.exists(temp_path):
                 os.makedirs(OUTPUT_PATH+output_filename)
             # writing output to json file
-            outs = OUTPUT_PATH+output_filename+'/'
-            with open(outs + output_filename+'('+str(index) + ')' + '.json', 'w') as f:
-                output_json = {os.path.basename(file_name):
-                               [{'Confidence Score': conf, 'Text': text,
-                                'Line no.': line_no, 'Top': top, 'Left':
-                                 left, } for conf, text, line_no,
-                                top, left in zip(process_image['conf'],
-                                                 process_image['text'],
-                                                 process_image['line_num'],
-                                                 process_image['top'],
-                                                 process_image['left'])]}
-                json.dump(output_json, f, indent=4)
-                path = outs+output_filename+'('+str(index)+').jpg'
+            with open(temp_path+'/' + output_filename+'('+str(index) + ')' + '.json', 'w') as f:
+                json_list = []
+                for conf, text, line_no, top, left in zip(process_image.get('conf'),
+                                                          process_image.get('text'),
+                                                          process_image.get('line_num'),
+                                                          process_image.get('top'),
+                                                          process_image.get('left')):
+                    output_json = {'Confidence Score': conf, 'Text': text,
+                                   'Line no.': line_no, 'Top': top, 'Left':
+                                   left, }
+                    print(output_json)
+                    json_list.append(output_json)
+                f.write(json.dumps(json_list))
+                path = temp_path+'/'+output_filename+'('+str(index)+').jpg'
                 image.save(path)
 
-            upload_file_to_s3(outs)
+            upload_file_to_s3(temp_path)
         except Exception as error:
             return error
 
@@ -102,7 +104,7 @@ class TessaractOcr:
         try:
             images = convert_from_path(input_file)
             file_name = os.path.basename(input_file)
-            file_name = file_name.split('.')[0]
+            file_name = file_name.splitext('.')[0]
             for index, image in enumerate(images):
                 self.extract_text_from_image(image, input_file, index)
         except Exception as error:
