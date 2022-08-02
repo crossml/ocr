@@ -182,7 +182,7 @@ class Easyocrpipleline:
             file_pdf = path
             images = convert_from_path(path)
             # get the image name without image extension
-            file_name = path.split('/')[-1].split('.')[0]
+            file_name=os.path.splitext(os.path.basename(path))[0]
             # iterate the each page of pdf
             for index, image in enumerate(images):
                 path = self.folder_path+file_name+'('+str(index)+').jpg'
