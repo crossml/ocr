@@ -13,7 +13,6 @@ from PIL import Image
 from config import EXTENSION_LIST
 
 
-
 SESSION = boto3.Session()
 S3 = SESSION.resource('s3')
 S3_JSON_SESSION = boto3.client('s3')
@@ -31,25 +30,6 @@ def upload_file_to_s3(json_path):
         return error
 
 
-def download_directory(bucketname, remotedirectoryname):
-    """
-    download the s3 folder
-
-    Args:
-        bucketname (_type_): bucket name
-        remotedirectoryname (_type_): directory path
-    """
-    try:
-        s3_resource = boto3.resource('s3')
-        bucket = s3_resource.Bucket(bucketname)
-        for obj in bucket.objects.filter(Prefix=remotedirectoryname):
-            if not os.path.exists(os.path.dirname(obj.key)):
-                os.makedirs(os.path.dirname(obj.key))
-            bucket.download_file(obj.key, obj.key)
-    except Exception as error:
-        return error
-
-
 class Easyocrpipleline:
     """
     Easy ocr pipeline
@@ -57,24 +37,24 @@ class Easyocrpipleline:
     main_folder = 'main_folder/'
     folder_path = 'folder/'
 
-    def file_create(self, zip_dir_path, json_name, file, dictionary):
+    def file_create(self, dir_path, json_name, file, dictionary):
         """
         To create a file
 
         Args:
-            zip_dir_path (string): zip path
+            dir_path (string): directory path
             json_name (string): json file name
             file (string): file path in zip
             dictionary (dictionary): json to write in file
         """
-        if not os.path.exists(zip_dir_path):
-            os.makedirs(zip_dir_path)
-        shutil.copy(file, zip_dir_path)
-        json_path = os.path.join(zip_dir_path, json_name)
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+        shutil.copy(file, dir_path)
+        json_path = os.path.join(dir_path, json_name)
         with open(json_path+".json", "w") as outfile:
             json.dump(dictionary, outfile)
 
-    def create_json(self, result, file, file_pdf='', file_zip=''):
+    def create_json(self, result, file, file_pdf=''):
         """
         json file save
         """
@@ -95,23 +75,16 @@ class Easyocrpipleline:
             dictionary[result[i][1]]["right"] = convert_rec(result[i][0][2])
             dictionary[result[i][1]]["bottom"] = convert_rec(result[i][0][3])
             dictionary[result[i][1]]["score"] = result[i][2]
-        json_name=os.path.splitext(os.path.basename(file))[0]
-        file_pdf_name=os.path.splitext(os.path.basename(file_pdf))[0]
+        json_name = os.path.splitext(os.path.basename(file))[0]
+        file_pdf_name = os.path.splitext(os.path.basename(file_pdf))[0]
         pdf_dir_path = os.path.join(self.main_folder, file_pdf_name)
-        if file_zip != '':
-            if file_pdf_name != '':
-                zip_pdf_dir_path = os.path.join(self.main_folder, file_pdf_name)
-                self.file_create(zip_pdf_dir_path, json_name, file, dictionary)
-            else:
-                zip_dir_path = os.path.join(self.main_folder, json_name)
-                self.file_create(zip_dir_path, json_name, file, dictionary)
-        elif file_pdf != '':
+        if file_pdf != '':
             self.file_create(pdf_dir_path, json_name, file, dictionary)
         else:
-            zip_pdf_dir_path = os.path.join(self.main_folder, json_name)
-            self.file_create(zip_pdf_dir_path, json_name, file, dictionary)
+            dir_path = os.path.join(self.main_folder, json_name)
+            self.file_create(dir_path, json_name, file, dictionary)
 
-    def image_process(self, path, file_pdf='', file_zip=''):
+    def image_process(self, path, file_pdf=''):
         """
         image process method
 
@@ -125,15 +98,16 @@ class Easyocrpipleline:
             # read the image data
             result = reader.readtext(path, width_ths=0)
             # function to create json
-            self.create_json(result, path, file_pdf, file_zip)
-            if file_pdf=='':
-                main_path=os.path.join(self.main_folder,os.path.splitext(path)[0])
-                # upload folder into s3
+            self.create_json(result, path, file_pdf)
+            if file_pdf == '':
+                main_path = os.path.join(
+                    self.main_folder, os.path.splitext(path)[0])
                 upload_file_to_s3(main_path)
+            # upload folder into s3
         except Exception as error:
             return error
 
-    def tif_image_process(self, path, file_zip=''):
+    def tif_image_process(self, path):
         """
         Tif image process
 
@@ -147,7 +121,7 @@ class Easyocrpipleline:
             # create object of easy ocr to read from image
             reader = easyocr.Reader(['hi', 'en'])
             # get file name without extension
-            tif_file_name=os.path.splitext(path)[0]
+            tif_file_name = os.path.splitext(path)[0]
             # iterate the each page of tif
             for i in range(img.n_frames):
                 if img.n_frames == 1:
@@ -163,14 +137,15 @@ class Easyocrpipleline:
                 # read the image data
                 result = reader.readtext(tif_file, width_ths=0)
                 # function to create json
-                self.create_json(result, tif_file_path, file_pdf, file_zip)
-            main_path=os.path.join(self.main_folder,os.path.splitext(path)[0])
+                self.create_json(result, tif_file_path, file_pdf)
+            main_path = os.path.join(
+                self.main_folder, os.path.splitext(path)[0])
             # upload folder into s3
             upload_file_to_s3(main_path)
         except Exception as error:
             return error
 
-    def pdf_process(self, path, file_zip=''):
+    def pdf_process(self, path):
         """
         PDF processing
 
@@ -182,15 +157,15 @@ class Easyocrpipleline:
             file_pdf = path
             images = convert_from_path(path)
             # get the image name without image extension
-            file_name=os.path.splitext(os.path.basename(path))[0]
+            file_name = os.path.splitext(os.path.basename(path))[0]
             # iterate the each page of pdf
             for index, image in enumerate(images):
                 path = self.folder_path+file_name+'('+str(index)+').jpg'
                 # save each page of image
                 image.save(path)
                 # read each page of pdf
-                self.image_process(path, file_pdf, file_zip)
-            main_path=os.path.join(self.main_folder,file_name)
+                self.image_process(path, file_pdf)
+            main_path = os.path.join(self.main_folder, file_name)
             # upload folder into s3
             upload_file_to_s3(main_path)
         except Exception as error:
@@ -205,17 +180,16 @@ class Easyocrpipleline:
             reader (object): easy ocr object
         """
         try:
-            file_zip = path
             # read the zip file
             with ZipFile(path, 'r') as zip_file:
                 for file in zip_file.namelist():
                     zip_file.extract(file, "")
                     extension = os.path.splitext(file)[-1].lower()
                     if extension in EXTENSION_LIST:
-                        self.image_process(file, file_zip=file_zip)
+                        self.image_process(file)
                     elif extension == '.tif':
-                        self.tif_image_process(file, file_zip)
+                        self.tif_image_process(file)
                     elif extension == '.pdf':
-                        self.pdf_process(file, file_zip)
+                        self.pdf_process(file)
         except Exception as error:
             return error
