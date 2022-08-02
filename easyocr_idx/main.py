@@ -1,7 +1,6 @@
 """
 easyocr pipline
 """
-from curses import beep
 import json
 import os
 from zipfile import ZipFile
@@ -129,8 +128,8 @@ class Easyocrpipleline:
             self.create_json(result, path, file_pdf, file_zip)
             if file_pdf=='':
                 main_path=os.path.join(self.main_folder,os.path.splitext(path)[0])
+                # upload folder into s3
                 upload_file_to_s3(main_path)
-            # upload folder into s3
         except Exception as error:
             return error
 
