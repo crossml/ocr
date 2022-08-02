@@ -11,9 +11,9 @@ import cv2
 from pdf2image import convert_from_path
 import boto3
 from PIL import Image
+from config import EXTENSION_LIST
 
 
-EXTENSION_LIST = ['.png', '.jpg', '.jpeg']
 
 SESSION = boto3.Session()
 S3 = SESSION.resource('s3')
@@ -29,7 +29,6 @@ def upload_file_to_s3(json_path):
             S3.meta.client.upload_file(
                 json_path+'/'+file, 'input-adaptor', json_path+'/'+file)
     except Exception as error:
-        print ("An error occurred in upload file to s3")
         return error
 
 
@@ -49,7 +48,6 @@ def download_directory(bucketname, remotedirectoryname):
                 os.makedirs(os.path.dirname(obj.key))
             bucket.download_file(obj.key, obj.key)
     except Exception as error:
-        print ("An error occurred in download folder")
         return error
 
 
@@ -65,10 +63,10 @@ class Easyocrpipleline:
         To create a file
 
         Args:
-            zip_dir_path (_type_): zip path
-            json_name (_type_): json file name
-            file (_type_): file path in zip
-            dictionary (_type_): json to write in file
+            zip_dir_path (string): zip path
+            json_name (string): json file name
+            file (string): file path in zip
+            dictionary (dictionary): json to write in file
         """
         if not os.path.exists(zip_dir_path):
             os.makedirs(zip_dir_path)
@@ -98,8 +96,8 @@ class Easyocrpipleline:
             dictionary[result[i][1]]["right"] = convert_rec(result[i][0][2])
             dictionary[result[i][1]]["bottom"] = convert_rec(result[i][0][3])
             dictionary[result[i][1]]["score"] = result[i][2]
-        json_name = file.split('/')[-1].split('.')[0]
-        file_pdf_name = file_pdf.split('/')[-1].split('.')[0]
+        json_name=os.path.splitext(os.path.basename(file))[0]
+        file_pdf_name=os.path.splitext(os.path.basename(file_pdf))[0]
         pdf_dir_path = os.path.join(self.main_folder, file_pdf_name)
         if file_zip != '':
             if file_pdf_name != '':
@@ -130,11 +128,10 @@ class Easyocrpipleline:
             # function to create json
             self.create_json(result, path, file_pdf, file_zip)
             if file_pdf=='':
-                main_path=os.path.join(self.main_folder,path.split('.')[0])
+                main_path=os.path.join(self.main_folder,os.path.splitext(path)[0])
                 upload_file_to_s3(main_path)
             # upload folder into s3
         except Exception as error:
-            print ("An error occurred in image process")
             return error
 
     def tif_image_process(self, path, file_zip=''):
@@ -151,7 +148,7 @@ class Easyocrpipleline:
             # create object of easy ocr to read from image
             reader = easyocr.Reader(['hi', 'en'])
             # get file name without extension
-            tif_file_name = path.split('.tif')[0]
+            tif_file_name=os.path.splitext(path)[0]
             # iterate the each page of tif
             for i in range(img.n_frames):
                 if img.n_frames == 1:
@@ -168,11 +165,10 @@ class Easyocrpipleline:
                 result = reader.readtext(tif_file, width_ths=0)
                 # function to create json
                 self.create_json(result, tif_file_path, file_pdf, file_zip)
-            main_path=os.path.join(self.main_folder,path.split('.')[0])
+            main_path=os.path.join(self.main_folder,os.path.splitext(path)[0])
             # upload folder into s3
             upload_file_to_s3(main_path)
         except Exception as error:
-            print ("An error occurred in tif process")
             return error
 
     def pdf_process(self, path, file_zip=''):
@@ -199,7 +195,6 @@ class Easyocrpipleline:
             # upload folder into s3
             upload_file_to_s3(main_path)
         except Exception as error:
-            print ("An error occurred in pdf process")
             return error
 
     def zip_process(self, path):
@@ -224,18 +219,4 @@ class Easyocrpipleline:
                     elif extension == '.pdf':
                         self.pdf_process(file, file_zip)
         except Exception as error:
-            print ("An error occurred in zip process")
             return error
-
-
-
-# download_directory('input-adaptor','main_folder/1')
-# PATH = 'Resume.pdf'
-# PATH = 'ICA_101_555090004.tif'
-PATH = 't2.zip'
-# PATH = '@#@$#$^#$%.png'
-process = Easyocrpipleline()
-# process.tif_image_process(PATH)
-process.zip_process(PATH)
-# process.image_process(PATH)
-# process.pdf_process(PATH)
