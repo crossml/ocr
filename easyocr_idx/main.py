@@ -41,24 +41,28 @@ class Easyocrpipleline:
         """
         json file save
         """
-        dictionary = {}
-        # create proper json to store in json file
-        dictionary = [{'left': int(i[0][0][0]),
-                       'top':int(i[0][1][1]),
-                       'right':int(i[0][2][0]),
-                       'bottom':int(i[0][3][1]),
-                       'text':i[1],
-                       'confidence':i[-1]} for i in result]
-        json_name = os.path.splitext(os.path.basename(file))[0]
-        file_pdf_name = os.path.splitext(os.path.basename(file_pdf))[0]
-        # path where json and images save
-        dir_path = os.path.join(TEMP, file_pdf_name)
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path)
-        json_path = os.path.join(dir_path, json_name)
-        # create json output file
-        with open(json_path+".json", "w") as outfile:
-            json.dump(dictionary, outfile)
+        try:
+            dictionary = {}
+            # create proper json to store in json file
+            dictionary = [{'left': int(i[0][0][0]),
+                            'top':int(i[0][1][1]),
+                            'right':int(i[0][2][0]),
+                            'bottom':int(i[0][3][1]),
+                            'text':i[1],
+                            'confidence':i[-1]} for i in result]
+            json_name = os.path.splitext(os.path.basename(file))[0]
+            file_pdf_name = os.path.splitext(os.path.basename(file_pdf))[0]
+            # path where json and images save
+            dir_path = os.path.join(TEMP, file_pdf_name)
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path)
+            json_path = os.path.join(dir_path, json_name)
+            # create json output file
+            with open(json_path+".json", "w") as outfile:
+                json.dump(dictionary, outfile)
+        except Exception as error:
+            return error
+        
 
     def image_read(self, path, images):
         """
