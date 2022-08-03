@@ -21,7 +21,7 @@ TEMP = '/tmp/'
 
 def upload_file_to_s3(json_path):
     """
-    Upload File to s3
+    Upload Folder to s3
     """
     try:
         json_path = os.path.join(TEMP, os.path.basename(json_path))
@@ -51,10 +51,12 @@ class Easyocrpipleline:
                        'confidence':i[-1]} for i in result]
         json_name = os.path.splitext(os.path.basename(file))[0]
         file_pdf_name = os.path.splitext(os.path.basename(file_pdf))[0]
+        # path where json and images save
         dir_path = os.path.join(TEMP, file_pdf_name)
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
         json_path = os.path.join(dir_path, json_name)
+        # create json output file
         with open(json_path+".json", "w") as outfile:
             json.dump(dictionary, outfile)
 
@@ -69,37 +71,47 @@ class Easyocrpipleline:
         try:
             file_pdf = path
             path = os.path.basename(path)
+            # get name of file without extension
             file_name = os.path.splitext(path)[0]
+            # create folder if folder path does not exists
             if not os.path.exists(TEMP+file_name):
                 os.makedirs(TEMP+file_name)
+            # iterate each frame of image
             for index, img in enumerate(images):
                 if os.path.splitext(path)[-1] == '.png':
                     file_path = path
                 else:
                     file_path = file_name+'('+str(index)+').jpg'
                 file_path = os.path.join(TEMP+file_name, file_path)
+                # save image in tmp folder
                 img.save(file_path)
+                # create object of easy ocr
                 reader = easyocr.Reader(['hi', 'en'])
                 # read the image data
                 result = reader.readtext(file_path, width_ths=0)
                 # function to create json
                 self.create_json(result, file_path, file_pdf)
+            # folder path to upload folder on s3
             main_path = os.path.join(TEMP, file_name)
+            # function call to folder upload to s3
             upload_file_to_s3(main_path)
         except Exception as error:
             return error
 
     def image_process(self, path):
         """
-        Tif image process
+         image process handling
 
         Args:
             path (string): file path
             reader (object): easy ocr object
         """
         try:
+            # create object of image
             img = Image.open(path)
+            # create iterator of each frame of image
             images = ImageSequence.Iterator(img)
+            # function call to read text from image
             self.image_read(path, images)
         except Exception as error:
             return error
@@ -113,7 +125,9 @@ class Easyocrpipleline:
             reader (object): easy ocr object
         """
         try:
+            # convert each page of pdf into image
             images = convert_from_path(path)
+            # function call to read text from image
             self.image_read(path, images)
         except Exception as error:
             return error
