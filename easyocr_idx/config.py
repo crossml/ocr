@@ -1,1 +1,1 @@
-EXTENSION_LIST = ['.png', '.jpg', '.jpeg']
+EXTENSION_LIST = ['.png', '.jpg', '.jpeg','.tif']
