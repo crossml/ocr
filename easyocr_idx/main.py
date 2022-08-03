@@ -37,7 +37,6 @@ class Easyocrpipleline:
     """
     Easy ocr pipeline
     """
-    main_folder = '/tmp/'
     def file_create(self, dir_path, json_name, file, dictionary):
         """
         To create a file
@@ -78,11 +77,11 @@ class Easyocrpipleline:
                             'confidence':i[-1]} for i in result]
         json_name = os.path.splitext(os.path.basename(file))[0]
         file_pdf_name = os.path.splitext(os.path.basename(file_pdf))[0]
-        pdf_dir_path = os.path.join(self.main_folder, file_pdf_name)
+        pdf_dir_path = os.path.join(TEMP, file_pdf_name)
         if file_pdf != '':
             self.file_create(pdf_dir_path, json_name, file, dictionary)
         else:
-            dir_path = os.path.join(self.main_folder, json_name)
+            dir_path = os.path.join(TEMP, json_name)
             self.file_create(dir_path, json_name, file, dictionary)
 
     def tif_image_process(self, path):
@@ -108,7 +107,7 @@ class Easyocrpipleline:
                 else:
                     img.seek(i)
                     tif_file_path = os.path.join(
-                        self.main_folder+tif_file_name+'('+str(i)+').tif')
+                        TEMP+tif_file_name+'('+str(i)+').tif')
                     # save each page of image
                     img.save(tif_file_path)
                 tif_file = cv2.imread(tif_file_path)
@@ -117,7 +116,7 @@ class Easyocrpipleline:
                 # function to create json
                 self.create_json(result, tif_file_path, file_pdf)
             main_path = os.path.join(
-                self.main_folder, os.path.splitext(os.path.basename(path))[0])
+                TEMP, os.path.splitext(os.path.basename(path))[0])
             # upload folder into s3
             upload_file_to_s3(main_path)
         except Exception as error:
@@ -138,12 +137,12 @@ class Easyocrpipleline:
             file_name = os.path.splitext(os.path.basename(path))[0]
             # iterate the each page of pdf
             for index, image in enumerate(images):
-                path = self.main_folder+file_name+'('+str(index)+').jpg'
+                path = TEMP+file_name+'('+str(index)+').jpg'
                 # save each page of image
                 image.save(path)
                 # read each page of pdf
                 self.image_process(path, file_pdf)
-            main_path = os.path.join(self.main_folder, file_name)
+            main_path = os.path.join(TEMP, file_name)
             # upload folder into s3
             upload_file_to_s3(main_path)
         except Exception as error:
@@ -189,10 +188,8 @@ class Easyocrpipleline:
             self.create_json(result, path, file_pdf)
             if not file_pdf:
                 main_path = os.path.join(
-                    self.main_folder, os.path.splitext(path)[0])
+                    TEMP, os.path.splitext(path)[0])
                 upload_file_to_s3(main_path)
             # upload folder into s3
         except Exception as error:
             return error
-
-
