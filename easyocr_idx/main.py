@@ -38,19 +38,22 @@ class Easyocrpipleline:
         """
         json file save
         """
-        dictionary = {}
-        # create proper json to store in json file
-        dictionary = [{'left': int(i[0][0][0]),
-                       'top':int(i[0][1][1]),
-                       'right':int(i[0][2][0]),
-                       'bottom':int(i[0][3][1]),
-                       'text':i[1],
-                       'confidence':i[-1]} for i in result]
-        # get json file path
-        json_name = os.path.splitext(file)[0]
-        # create json log file
-        with open(json_name+".json", "w") as outfile:
-            json.dump(dictionary, outfile)
+        try:
+            dictionary = {}
+            # create proper json to store in json file
+            dictionary = [{'left': int(i[0][0][0]),
+                        'top':int(i[0][1][1]),
+                        'right':int(i[0][2][0]),
+                        'bottom':int(i[0][3][1]),
+                        'text':i[1],
+                        'confidence':i[-1]} for i in result]
+            # get json file path
+            json_name = os.path.splitext(file)[0]
+            # create json log file
+            with open(json_name+".json", "w") as outfile:
+                json.dump(dictionary, outfile)
+        except Exception as error:
+            return error
 
     def image_read(self, path, images):
         """
