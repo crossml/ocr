@@ -23,7 +23,6 @@ def upload_file_to_s3(json_path):
     try:
         for file in os.listdir(json_path):
             s3_json_path = os.path.join(json_path, file)
-            print('json_path', json_path)
             S3.meta.client.upload_file(
                 s3_json_path, BUCKET_NAME, s3_json_path)
     except Exception as error:
