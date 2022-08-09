@@ -1,2 +1,3 @@
-EXTENSION_LIST = ['.png', '.jpg', '.jpeg','.tif']
-S3_BUCKET_NAME = 'input-adaptor'
+EXTENSION_LISTS = ['.png', '.jpg', '.jpeg','.tif']
+TEMP = '/tmp/'
+S3_BUCKET_NAME='input-adaptor'
