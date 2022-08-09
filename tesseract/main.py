@@ -7,7 +7,8 @@ import zipfile
 import boto3
 import pytesseract
 from pytesseract import Output
-from PIL import Image, ImageSequence
+from PIL import Image
+from PIL import ImageSequence
 from pdf2image import convert_from_path
 from config import OUTPUT_PATH
 from config import EXTENSION_LIST
@@ -29,7 +30,7 @@ def upload_file_to_s3(local_file_path):
         # saving file to s3
         for filename in os.listdir(local_file_path):
             S3.meta.client.upload_file(
-                local_file_path+'/'+filename, S3_BUCKET_NAME , local_file_path+'/'+filename)
+                local_file_path+'/'+filename, S3_BUCKET_NAME, local_file_path+'/'+filename)
     except Exception as error:
         return error
 
@@ -42,7 +43,6 @@ class TessaractOcr:
     def extract_text_from_image(self, image, file_name, index):
         """
         extracting text from images
-
         Args:
             image (object): image object
             file_name (str): name of file
@@ -72,7 +72,7 @@ class TessaractOcr:
                                                                     'text'),
                                                                 process_image.get('conf')):
                     # removing empty values from output
-                    if conf > "0":
+                    if float(conf) > 0:
                         output_json = {'left': left, 'top': top, 'right': left+width,
                                        'bottom': top+height, 'text': text, 'confidence':
                                        round(float(conf), 2)}
