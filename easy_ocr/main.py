@@ -187,10 +187,3 @@ class EasyOcrProcessor:
                         return "Invalid Extension"
         except Exception as error:
             return error
-
-
-PATH='Yakul(1).png'
-# STORAGE_PATH='input-adaptor'
-config={'storage_type':'AWS','storage_path':'input-adaptor'}
-process = EasyOcrProcessor(config)
-process.process_image(PATH)
