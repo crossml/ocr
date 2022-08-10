@@ -14,7 +14,7 @@ from config import TEMP
 from PIL import Image, ImageSequence
 
 
-
+easyocr_output_path='easyocr_output'
 SESSION = boto3.Session()
 S3 = SESSION.resource('s3')
 
@@ -31,29 +31,28 @@ def upload_file_to_s3(json_path,storage_path):
         for file in os.listdir(json_path):
             s3_json_path = os.path.join(json_path, file)
             S3.meta.client.upload_file(
-                s3_json_path, storage_path, os.path.join('easyocr_output',os.path.basename(json_path),file))
+                s3_json_path, storage_path, os.path.join(easyocr_output_path,os.path.basename(json_path),file))
     except Exception as error:
-        print(error)
         return error
 
 
 class EasyOcrProcessor:
     """
-    Easy ocr pipeline for images pdf tif jpef zip file read
+    Easy ocr pipeline for images pdf tif jpef zip file read.
     """
     def __init__(self, config):
         self.config=config
 
     def create_json(self, result, file):
         """
-        Function for create json of ocr result
+        Function for create json of ocr result.
 
         1. Create dictionary of result ocr in proper format.
         2. Save the dictionary in file with the name of relative image.
 
         Args:
-            result (dict): dictionary of result
-            file (string): name of file
+            result (dict): dictionary of result.
+            file (string): name of file.
         """
         try:
             
@@ -76,12 +75,12 @@ class EasyOcrProcessor:
 
     def image_read(self, path, images):
         """
-        Function for create image path and upload the file in s3
+        Function for create image path and upload the file in s3.
 
         1. Make folder of image name.
-        2. save image in relative folder for each image
-        3. read text from each image and store json in relative folder
-        4. upload image and json file on s3
+        2. save image in relative folder for each image.
+        3. read text from each image and store json in relative folder.
+        4. upload image and json file on s3.
 
         Args:
             path (string): path of image.
@@ -120,16 +119,15 @@ class EasyOcrProcessor:
             elif self.config.get('storage_type').lower()=='local':
                 shutil.copytree(folder_path, os.path.join(self.config.get('storage_path'),file_name), symlinks=False, ignore=None, ignore_dangling_symlinks=False, dirs_exist_ok=True)
         except Exception as error:
-            print(error)
             return error
 
     # def image_process(self, path):
     def process_image(self, path):
         """
-        Image process
+        Process the images like jpg, jpeg, tif.
 
         Args:
-            path (string): file path
+            path (string): file path.
             storage_type (string): type of storage where file is store.
             storage_path (string): path of storage where file is store.
         """
@@ -139,19 +137,18 @@ class EasyOcrProcessor:
             # read the image
             self.image_read(path, images)
         except Exception as error:
-            print(error)
             return error
 
     # def pdf_process(self, path):
     def process_pdf(self, path):
         """
-        Process the pdf file
+        Process the pdf file.
 
         1. convert each page of pdf into image.
         2. pass images to image read function to get text from each image.
 
         Args:
-            path (string): file path
+            path (string): file path.
             storage_type (string): type of storage where file is store.
             storage_path (string): path of storage where file is store.
         """
@@ -161,19 +158,18 @@ class EasyOcrProcessor:
             # read the image
             self.image_read(path, images)
         except Exception as error:
-            print(error)
             return error
 
     def process_zip(self, path):
         """
-        Process the zip file
+        Process the zip file.
 
         1. Extract each file in zip one by one.
         2. If file is of pdf type than file is pass in process_pdf function for further process.
         3. If file is of image type than it is pass in process_image function for further process.
 
         Args:
-            path (string): file path
+            path (string): file path.
             storage_type (string): type of storage where file is store.
             storage_path (string): path of storage where file is store.
         """
@@ -190,7 +186,11 @@ class EasyOcrProcessor:
                     else:
                         return "Invalid Extension"
         except Exception as error:
-            print(error)
             return error
 
 
+PATH='Yakul(1).png'
+# STORAGE_PATH='input-adaptor'
+config={'storage_type':'AWS','storage_path':'input-adaptor'}
+process = EasyOcrProcessor(config)
+process.process_image(PATH)
