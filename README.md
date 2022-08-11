@@ -43,7 +43,7 @@ process.process_pdf(PATH)
 process.process_zip(PATH)
 ```
 
-## Documentation:
+# Documentation:
 
 The full package documentation is available here.
 

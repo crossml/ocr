@@ -4,17 +4,16 @@ easyocr pipline
 import json
 import os
 import shutil
-from zipfile import ZipFile
 import easyocr
-from pdf2image import convert_from_path
 import boto3
+from zipfile import ZipFile
+from pdf2image import convert_from_path
+from PIL import ImageSequence
 from PIL import Image
 from config import EXTENSION_LISTS
 from config import TEMP
-from PIL import Image, ImageSequence
 
-
-easyocr_output_path='easyocr_output'
+EASYOCR_OUTPUT_PATH='easyocr_output'
 SESSION = boto3.Session()
 S3 = SESSION.resource('s3')
 
@@ -31,7 +30,7 @@ def upload_file_to_s3(json_path,storage_path):
         for file in os.listdir(json_path):
             s3_json_path = os.path.join(json_path, file)
             S3.meta.client.upload_file(
-                s3_json_path, storage_path, os.path.join(easyocr_output_path,os.path.basename(json_path),file))
+                s3_json_path, storage_path, os.path.join(EASYOCR_OUTPUT_PATH,os.path.basename(json_path),file))
     except Exception as error:
         return error
 
@@ -60,7 +59,8 @@ class EasyOcrProcessor:
 
     image_read:
 
-        method for create image path and upload the file in s3 or save file in local system according to user input.
+        method for create image path and upload the file in s3 or save file in local system
+        according to user input.
 
     create_json:
 
@@ -101,7 +101,8 @@ class EasyOcrProcessor:
 
     def image_read(self, path, images):
         """
-        Function for create image path and upload the file in s3 or save file in local system according to user input.
+        Function for create image path and upload the file in s3 or save file in local system
+        according to user input.
 
         1. Make folder of image name.
         2. save image in relative folder for each image.
@@ -127,7 +128,7 @@ class EasyOcrProcessor:
             # iterate image
             for index, img in enumerate(images):
                 if file_extension == '.tif' or file_extension == '.pdf':
-                    file_path = file_name+'('+str(index)+').jpg'
+                    file_path = file_name+'_'+str(index)+'.jpg'
                 else:
                     file_path = path
                 file_path = os.path.join(folder_path, file_path)
