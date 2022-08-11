@@ -39,6 +39,32 @@ def upload_file_to_s3(json_path,storage_path):
 class EasyOcrProcessor:
     """
     Easy ocr pipeline for images pdf tif jpef zip file read.
+
+    Attributes:
+
+    1. config (dict): dictionary of storage type and storage path.
+
+    Methods:
+
+    process_image:
+
+        method for process the images of type jpg, jpeg, tif.
+
+    process_pdf:
+
+        method for process the pdf files.
+
+    process_zip:
+
+        method for process the zip files.
+
+    image_read:
+
+        method for create image path and upload the file in s3 or save file in local system according to user input.
+
+    create_json:
+
+        method for create json file of ocr result.
     """
     def __init__(self, config):
         self.config=config
@@ -75,7 +101,7 @@ class EasyOcrProcessor:
 
     def image_read(self, path, images):
         """
-        Function for create image path and upload the file in s3.
+        Function for create image path and upload the file in s3 or save file in local system according to user input.
 
         1. Make folder of image name.
         2. save image in relative folder for each image.
@@ -85,8 +111,6 @@ class EasyOcrProcessor:
         Args:
             path (string): path of image.
             images (object): object of image.
-            storage_type (string): type of storage where file is store.
-            storage_path (string): path of storage where file is store.
         """
         try:
             reader = easyocr.Reader(['hi', 'en'])
@@ -128,8 +152,6 @@ class EasyOcrProcessor:
 
         Args:
             path (string): file path.
-            storage_type (string): type of storage where file is store.
-            storage_path (string): path of storage where file is store.
         """
         try:
             img = Image.open(path)
@@ -149,8 +171,6 @@ class EasyOcrProcessor:
 
         Args:
             path (string): file path.
-            storage_type (string): type of storage where file is store.
-            storage_path (string): path of storage where file is store.
         """
         try:
             # convert the pdf into images
@@ -170,8 +190,6 @@ class EasyOcrProcessor:
 
         Args:
             path (string): file path.
-            storage_type (string): type of storage where file is store.
-            storage_path (string): path of storage where file is store.
         """
         try:
             # read the zip file
