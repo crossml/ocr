@@ -38,7 +38,8 @@ def upload_file_to_s3(local_file_path, storage_path):
         # saving file to s3
         for filename in os.listdir(local_file_path):
             S3.meta.client.upload_file(
-                local_file_path+'/'+filename, storage_path, os.path.join('tesseract_output', os.path.basename(local_file_path), filename))
+                local_file_path+'/'+filename, storage_path, os.path.join('tesseract_output',
+                                                     os.path.basename(local_file_path), filename))
             return (os.path.join('tesseract_output', os.path.basename(local_file_path), filename))
     except Exception as error:
         return error
@@ -83,15 +84,17 @@ class TesseractOcrProcessor:
             file_name = os.path.basename(file_name)
             output_filename = os.path.splitext(file_name)[0]
             # processing image using Tessaract Ocr
-            process_image_txt = pytesseract.image_to_string(
+            get_txt = pytesseract.image_to_string(
                 image, output_type=Output.DICT)
             process_image = pytesseract.image_to_data(
                 image, output_type=Output.DICT)
             temp_path = OUTPUT_PATH+output_filename
             if not os.path.exists(temp_path):
                 os.makedirs(OUTPUT_PATH+output_filename)
+            with open(temp_path+'/' + output_filename+'_'+str(index) + '.txt', 'w') as f:
+                f.write(get_txt['text'])
             # writing output to json file
-            with open(temp_path+'/' + output_filename+'('+str(index) + ')' + '.json', 'w') as f:
+            with open(temp_path+'/' + output_filename+'_'+str(index) + '.json', 'w') as f:
                 json_list = []
                 for left, top, width, height, text, conf in zip(process_image.get('left'),
                                                                 process_image.get(
@@ -110,7 +113,7 @@ class TesseractOcrProcessor:
                                        round(float(conf), 2)}
                         json_list.append(output_json)
                 f.write(json.dumps(json_list))
-                path = temp_path+'/'+output_filename+'('+str(index)+').jpg'
+                path = temp_path+'/'+output_filename+'_'+str(index)+'.jpg'
                 image.save(path)
             if config['storage_type'].lower() == 'local':
                 shutil.copytree(temp_path, os.path.join(
