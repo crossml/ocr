@@ -95,7 +95,6 @@ process.process_zip(PATH)
 ```
 
 ## Result output:
-![Result json]
 
 ```
 [{

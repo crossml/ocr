@@ -39,7 +39,7 @@ def upload_file_to_s3(local_file_path, storage_path):
         for filename in os.listdir(local_file_path):
             S3.meta.client.upload_file(
                 local_file_path+'/'+filename, storage_path, os.path.join('tesseract_output',
-                                                     os.path.basename(local_file_path), filename))
+                                                                         os.path.basename(local_file_path), filename))
             return (os.path.join('tesseract_output', os.path.basename(local_file_path), filename))
     except Exception as error:
         return error
@@ -91,10 +91,12 @@ class TesseractOcrProcessor:
             temp_path = OUTPUT_PATH+output_filename
             if not os.path.exists(temp_path):
                 os.makedirs(OUTPUT_PATH+output_filename)
-            with open(temp_path+'/' + output_filename+'_'+str(index) + '.txt', 'w') as f:
+            file_path = temp_path+'/' + output_filename+'_'+str(index)
+            # writing output text to text file
+            with open(file_path + '.txt', 'w') as f:
                 f.write(get_txt['text'])
-            # writing output to json file
-            with open(temp_path+'/' + output_filename+'_'+str(index) + '.json', 'w') as f:
+            # writing output json to json file
+            with open(file_path + '.json', 'w') as f:
                 json_list = []
                 for left, top, width, height, text, conf in zip(process_image.get('left'),
                                                                 process_image.get(
@@ -113,7 +115,7 @@ class TesseractOcrProcessor:
                                        round(float(conf), 2)}
                         json_list.append(output_json)
                 f.write(json.dumps(json_list))
-                path = temp_path+'/'+output_filename+'_'+str(index)+'.jpg'
+                path = file_path+'.jpg'
                 image.save(path)
             if config['storage_type'].lower() == 'local':
                 shutil.copytree(temp_path, os.path.join(
