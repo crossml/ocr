@@ -2,8 +2,8 @@
 @author: crossml
 
 Optical Character Recognition for images, Pdfs, zip files, tif files.
-In this module We have used tesseract ocr for proceesing documents.
-You can give an any document and generate meaningful json of that document.
+In this module, We have used tesseract OCR for processing documents.
+You can give any document and generate meaningful JSON of that document.
 """
 import os
 import json
@@ -25,12 +25,12 @@ S3 = SESSION.resource('s3')
 def upload_file_to_s3(local_file_path, storage_path):
     """
     This module is used to save files from an entire folder to AWS S3 Bucket
-    User will give input file path and S3 bucket name.
-    This module will cretae a dir named "tesseract_output" in S3 and save the output
+    The user will give the input file path and S3 bucket name.
+    This module will create a dir named "tesseract_output" in S3 and save the output
     to that folder.
 
     Args:
-        local_file_path (str): Input file path of the file given by user
+        local_file_path (str): Input file path of the file given by the user
         storage_path (string): name of s3 bucket.
 
     """
@@ -44,21 +44,21 @@ def upload_file_to_s3(local_file_path, storage_path):
         return error
 
 
-class TessaractOcr:
+class TesseractOcrProcessor:
     """
-    Tesseract ocr pipeline for images pdf tif jpef zip file read.
+    Tesseract OCR pipeline for images pdf tif jpeg zip file read.
     Attributes:
-    1. config (dict): dictionary of storage type and storage path.
+    1. config (dict): a dictionary of storage type and storage path.
     Methods:
     process_image:
-        method for process the images of type jpg, jpeg, tif, png.
+        method for processing the images of type jpg, jpeg, tif, png.
     process_pdf:
-        method for process the pdf files.
+        method for processing the pdf files.
     process_zip:
-        method for process the zip files.
+        method for processing the zip files.
     extract_text_from_image:
-        method for extracting text from image,create json file of ocr
-        result and upload the output file in s3 or save file in local system
+        method for extracting text from the image, create JSON file of ocr
+        result and upload the output file in s3 or save the file in the local system
         according to user input.
     """
 
@@ -71,12 +71,12 @@ class TessaractOcr:
 
     def extract_text_from_image(self, image, file_name, index):
         """
-        In this function we will extract data from the image objects.
-        Then we will proces sthe data to store the output in json and text format.
+        In this function, we will extract data from the image objects.
+        Then we will process the data to store the output in JSON and text format.
         Args:
             image (object): image object from process pdf or image function
             file_name (str): name of the input file
-            index (int): index no of image object
+            index (int): index no of the image object
         """
         try:
             # removing extension from input file name for output file initial name
@@ -123,8 +123,8 @@ class TessaractOcr:
 
     def process_image(self, input_file):
         """
-        In this function we will take image from the user
-        and read that image using open function of Image module.
+        In this function, we will take an image from the user
+        and read that image using the open function of the Image module.
         Then we will enumerate the image to get index no. and image object
         from the given object.
         Args:
@@ -140,9 +140,9 @@ class TessaractOcr:
 
     def process_pdf(self, input_file):
         """
-        In this function we will take pdf file from the user
-        and iterate over each page of the pdf using convert_from_path function
-        and store them in images module.
+        In this function, we will take a pdf file from the user
+        and iterate over each page of the pdf using the convert_from_path function
+        and store them in the images module.
         Then we will enumerate the image to get index no. and image object
         from the given object.
         Args:
@@ -157,13 +157,15 @@ class TessaractOcr:
 
     def process_zip(self, input_file):
         """
-        In this function we will take zip file from the user and validate the zip
-        file. After that the zip file will be iterated using namelist function and
-        save them to /tmp/ of loacl device.
+
+        In this function, we will take the zip file from the user and validate the zip
+        file. After that, the zip file will be iterated using namelist function and
+        saved to /tmp/ of the local device.
         Then after checking the extension of the file process image or pdf function
         will be called.
         Args:
             input_file (str): input(zip) file from the user
+
         """
         try:
             # reading zip file
