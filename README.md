@@ -13,14 +13,25 @@ Get text from documents and save results in JSON.
 Developer mode
 
 ```
-pip install python-vision
+pip install python-ocr
 ```
 
 ## Getting your pretrained model
 
+storage_type='local/aws' #currently only local and aws supported.
+local storage_path='Desired path of your OS where you want to store the output' # for local storage.
+local storage_path='S3 bucket' # for AWS storage (CASE SENSTIVE).
+
+
+e.g. for Storing output to AWS
+
 ```
-from OCR import TesseractOcrProcessor
-config={'storage_type':'','storage_path:''}
+config={'storage_type':'AWS','storage_path:'your-bucket-name'}
+```
+
+
+```
+from ocr import TesseractOcrProcessor
 process=TesseractOcrProcessor(config)
 
 ```
