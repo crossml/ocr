@@ -6,7 +6,7 @@ What you can expect from this repository:
 
 ## Quick Tour
 
-Get text from documents and save result in json.
+Get text from documents and save results in JSON.
 
 ## Installation
 
@@ -47,11 +47,11 @@ process.process_zip(PATH)
 
 The full package documentation is available here.
 
-First of all you have to create dict of storage_type and storage_path.
+First of all, you have to create dict of storage_type and storage_path.
 
-1. storage_type: storage type is type of storage where user wants to store the output result. It may be local or aws.
+1. storage_type: storage type is type of storage where the user wants to store the output result. It may be local or aws.
 
-2. storage_path: storage path is path where user wants to store the output result.
+2. storage_path: storage path is path where the user wants to store the output result.
 
     - if you want to store the file in local system than give the path of folder where user wants to store the result as storage_path.
 
@@ -95,4 +95,30 @@ process.process_zip(PATH)
 ```
 
 ## Result output:
-![Result json](result.png)
+
+```
+[{
+        "left": 125,
+        "top": 141,
+        "right": 259,
+        "bottom": 161,
+        "text": "Folin MGA-5875",
+        "confidence": 0.3961432168382489
+    },
+    {
+        "left": 1115,
+        "top": 140,
+        "right": 1272,
+        "bottom": 161,
+        "text": "OM8 N0 : 2126-0006",
+        "confidence": 0.41482855467690777
+    },
+    {
+        "left": 1281,
+        "top": 139,
+        "right": 1498,
+        "bottom": 165,
+        "text": "Epiration Datc 12/31/2024",
+        "confidence": 0.40780972855935615
+    }]
+```

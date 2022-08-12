@@ -1,5 +1,9 @@
 """
-easyocr pipline
+@author: Crossml
+
+Optical Character Recognition for images, Pdfs, zip files, tif files.
+In this module, We have used EasyOCR for processing documents.
+You can give any document and generate meaningful JSON of that document.
 """
 import json
 import os
@@ -20,7 +24,10 @@ S3 = SESSION.resource('s3')
 
 def upload_file_to_s3(json_path,storage_path):
     """
-    Upload image and relative json file to aws s3 cloud.
+    This method is used to save files from an entire folder to AWS S3 Bucket
+    The user will give the input file path and S3 bucket name.
+    This module will create a dir named "easyocr_output" in S3 and save the output
+    to that folder.
 
     Args:
         json_path (dict): path where file is store on s3.
@@ -32,6 +39,7 @@ def upload_file_to_s3(json_path,storage_path):
             S3.meta.client.upload_file(
                 s3_json_path, storage_path, os.path.join(EASYOCR_OUTPUT_PATH,os.path.basename(json_path),file))
     except Exception as error:
+        print(error)
         return error
 
 
@@ -71,7 +79,7 @@ class EasyOcrProcessor:
 
     def create_json(self, result, file):
         """
-        Function for create json of ocr result.
+        Function for create json of ocr result and txt file of text extracted from image.
 
         1. Create dictionary of result ocr in proper format.
         2. Save the dictionary in file with the name of relative image.
@@ -81,7 +89,6 @@ class EasyOcrProcessor:
             file (string): name of file.
         """
         try:
-            
             dictionary = {}
             # create proper json to store in json file
             dictionary = [{'left': int(i[0][0][0]),
@@ -90,12 +97,17 @@ class EasyOcrProcessor:
                         'bottom':int(i[0][3][1]),
                         'text':i[1],
                         'confidence':i[-1]} for i in result]
+            text_list=[i[1]+'\n' for i in result]
             # get json file path
             json_name = os.path.splitext(file)[0]
+            # save text output file
+            with open(json_name+".txt", "w") as outfile:
+                outfile.writelines(text_list)
             # create json log file
             with open(json_name+".json", "w") as outfile:
                 json.dump(dictionary, outfile)
         except Exception as error:
+            print(error)
             return error
 
 
@@ -114,7 +126,7 @@ class EasyOcrProcessor:
             images (object): object of image.
         """
         try:
-            reader = easyocr.Reader(['hi', 'en'])
+            reader = easyocr.Reader(['hi', 'en'],gpu=False)
             path = os.path.basename(path)
             # get file name
             file_name = os.path.splitext(path)[0]
@@ -135,7 +147,7 @@ class EasyOcrProcessor:
                 # save image
                 img.save(file_path)
                 # read the image data
-                result = reader.readtext(file_path, width_ths=0)
+                result = reader.readtext(file_path)
                 # function to create json
                 self.create_json(result, file_path)
             if self.config.get('storage_type').lower()=='aws':
@@ -144,13 +156,17 @@ class EasyOcrProcessor:
             elif self.config.get('storage_type').lower()=='local':
                 shutil.copytree(folder_path, os.path.join(self.config.get('storage_path'),file_name), symlinks=False, ignore=None, ignore_dangling_symlinks=False, dirs_exist_ok=True)
         except Exception as error:
+            print(error)
             return error
 
     # def image_process(self, path):
     def process_image(self, path):
         """
-        Process the images like jpg, jpeg, tif.
-
+        In this function, we will take an image from the user
+        and read that image using the open function of the Image module.
+        Then we will enumerate the image to get index no. and image object
+        from the given object.
+        
         Args:
             path (string): file path.
         """
@@ -160,18 +176,23 @@ class EasyOcrProcessor:
             # read the image
             self.image_read(path, images)
         except Exception as error:
+            print(error)
             return error
 
     # def pdf_process(self, path):
     def process_pdf(self, path):
         """
+        In this function, we will take a pdf file from the user
+        and iterate over each page of the pdf using the convert_from_path function.
+        Then we will enumerate the image to get index no. and image object
+        from the given object.
         Process the pdf file.
 
         1. convert each page of pdf into image.
         2. pass images to image read function to get text from each image.
 
         Args:
-            path (string): file path.
+            path (string): pdf file path.
         """
         try:
             # convert the pdf into images
@@ -179,18 +200,22 @@ class EasyOcrProcessor:
             # read the image
             self.image_read(path, images)
         except Exception as error:
+            print(error)
             return error
 
     def process_zip(self, path):
         """
-        Process the zip file.
+        In this function, we will take the zip file from the user and check the files in zip.
+        and than extract each file one by one and saved to /tmp/ of the local device.
+        Then after checking the extension of the file process image or pdf function
+        will be called.
 
         1. Extract each file in zip one by one.
         2. If file is of pdf type than file is pass in process_pdf function for further process.
         3. If file is of image type than it is pass in process_image function for further process.
 
         Args:
-            path (string): file path.
+            path (string): zip file path.
         """
         try:
             # read the zip file
@@ -203,6 +228,8 @@ class EasyOcrProcessor:
                     elif extension == '.pdf':
                         self.process_pdf(TEMP+file)
                     else:
+                        print("Invalid Extension")
                         return "Invalid Extension"
         except Exception as error:
+            print(error)
             return error
