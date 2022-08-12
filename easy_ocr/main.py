@@ -8,6 +8,7 @@ You can give any document and generate meaningful JSON of that document.
 import json
 import os
 import shutil
+from turtle import width
 import easyocr
 import boto3
 from zipfile import ZipFile
@@ -101,8 +102,8 @@ class EasyOcrProcessor:
             # get json file path
             json_name = os.path.splitext(file)[0]
             # save text output file
-            with open(json_name+".txt", "w") as outfile:
-                outfile.writelines(text_list)
+            with open(json_name+".txt", "w") as textfile:
+                textfile.writelines(text_list)
             # create json log file
             with open(json_name+".json", "w") as outfile:
                 json.dump(dictionary, outfile)
@@ -233,3 +234,7 @@ class EasyOcrProcessor:
         except Exception as error:
             print(error)
             return error
+
+config={'storage_path':'/home/yakul/Desktop/','storage_type':'local'}
+process=EasyOcrProcessor(config)
+process.process_pdf('/home/yakul/Desktop/IDX/ocr/easy_ocr/KN_UIC_ICA3.pdf')
